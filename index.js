@@ -71,24 +71,11 @@ server.on('connection',(socket)=>{
             // console.log(clients);
             console.log(msg);
             
-            clients[clients.findIndex(x=>x.id == msg.userId)].socket.close();
+            tables.find(x=>x.tableId == msg.tableId).players.find(x=>x.id==msg.userId).socket.close();
             clients.splice(clients.findIndex(x=>x.id == msg.userId), 1)
             clients.forEach(client=>{
                 client.socket.send(JSON.stringify({type:'disced', userId:msg.userId, userName: msg.userName}))
             })
-        }
-        if (msg.type == 'text') {
-            clients.forEach(client=>{
-                client.socket.send(JSON.stringify(msg))
-            })
-        }
-        if (msg.type == 'private-text') {
-            const client = clients.find(x=>x.id == msg.targetUser);
-            const client2 = clients.find(x=>x.id == msg.userId);
-            if (client) {
-                client.socket.send(JSON.stringify(msg))
-                client2.socket.send(JSON.stringify(msg))
-            }
         }
     })
 })
