@@ -39,18 +39,20 @@ server.on('connection',(socket)=>{
                     'socket': socket, 
                     'id':clientId,
                     'name':msg.userName,
-                    'table':tableId
+                    'table':tableId,
+                    'position':0
                 }]})
             }
-            // clients.push({
-            //     'socket': socket, 
-            //     'id':clientId,
-            //     'name':msg.userName,
-            //     'table':tableId
-            // });
+            clients.push({
+                'socket': socket, 
+                'id':clientId,
+                'name':msg.userName,
+                'table':tableId
+            });
             // console.log(clients);
             let userList = [];
-            tables.find(x=>x.tableId == tableId).players.forEach(player=>{
+            let currTable = tables.find(x=>x.tableId == tableId);
+            currTable.players.forEach(player=>{
                 userList.push({
                     userId:player.id,
                     userName:player.name
@@ -60,7 +62,7 @@ server.on('connection',(socket)=>{
                 type:'init',
                 userId: clientId
             }))
-            tables.find(x=>x.tableId == tableId).players.forEach(player=>{
+            currTable.find(x=>x.tableId == tableId).players.forEach(player=>{
                 userList.push({
                     userId:player.id,
                     userName:player.name
@@ -70,10 +72,9 @@ server.on('connection',(socket)=>{
         if (msg.type == 'disc') {
             // console.log(clients);
             console.log(msg);
-            
-            tables.find(x=>x.tableId == msg.tableId).players.find(x=>x.id==msg.userId).socket.close();
-            clients.splice(clients.findIndex(x=>x.id == msg.userId), 1)
-            clients.forEach(client=>{
+            let currTable = tables.find(x=>x.tableId == msg.tableId);
+            currTable.players.find(x=>x.id==msg.userId).socket.close();
+            currTable.players.forEach(client=>{
                 client.socket.send(JSON.stringify({type:'disced', userId:msg.userId, userName: msg.userName}))
             })
         }
