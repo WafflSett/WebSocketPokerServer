@@ -45,27 +45,27 @@ server.on('connection', (socket) => {
             } else {
                 clientId = 1;
             }
+            console.log('init: new user connecting...');
+            
 
             if (tables.length > 0 && tables.find(x=>x.players.length < 10)!=null) {
                 let lasttable = tables.find(x=>x.players.length < 10);
-                if (lasttable.players.find(x => x.position == 9) == null) {
-                    position++;
-                } else {
-                    let usedPositions = lasttable.player.map(x => x.position);
-                    for (let i = 0; i < 10; i++) {
-                        if (!usedPositions.contains(i)) {
-                            position = i;
-                            break;
-                        }
+                let usedPositions = lasttable.players.map(x => x.position);
+                console.log(usedPositions);
+                
+                for (let i = 0; i < 10; i++) {
+                    if (!usedPositions.contains(i)) {
+                        position = i;
+                        break;
                     }
                 }
+
                 lasttable.players.push({
                     'socket': socket,
                     'id': clientId,
                     'name': msg.userName,
                     'table': tableId,
                     'position': position,
-
                 })
             } else {
                 // create new table
@@ -101,21 +101,28 @@ server.on('connection', (socket) => {
                 })
             })
 
+            console.log(`init: User ${clientId} connected to table ${tableId} at position ${position}`);
+
             socket.send(JSON.stringify({
                 type: 'init',
                 userId: clientId,
                 position: position
             }))
 
-            broadcastToTable(currTable, { type: 'join', userId:clientId, position: position });
+            broadcastToTable(currTable, { type: 'join', userId:clientId, tableId, position: position });
             broadcastToTable(currTable, { type: 'userlist', userList: userList })
             return;
         }
 
-        let currTable = tables.find(x => x.tableId == msg.tableId);
+        // console.log(msg);
+        let currTable = tables.find(x => x.players.find(x=>x.id == msg.userId) != null);
         if (msg.type == 'disc') {
-            currTable.players.find(x => x.id == msg.userId).socket.close();
+            // console.log(currTable);
+            let user = currTable.players.find(x => x.id == msg.userId);
+            console.log('dc: user '+user.id+' disconnecting...');
+            user.socket.close();
             broadcastToTable(currTable, { type: 'disced', userId: msg.userId, userName: msg.userName })
+            console.log('dc: User '+user.id+' disconnect successful');
             return;
         }
         if (msg.type == 'ready') {
