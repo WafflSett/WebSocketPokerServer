@@ -1,0 +1,15 @@
+Message type documentation
+
+#############################
+Server receives:
+-'init': request for initialization
+-'disc': disconnect request
+-'ready': user requests start of game at specified table
+
+
+##############################
+Server sends:
+-'init': returns uid, tableId, position, list of players already at the table
+-'disc': returns disconnect notification to players at dc's table
+-'join': returns freshly joined user's info to specified table
+-'ready': returns dealer's position + sets table inProgress to true

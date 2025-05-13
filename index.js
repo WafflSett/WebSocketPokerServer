@@ -7,7 +7,7 @@ const server = new WebSocketServer({
 let clientId = 0;
 const clients = [];
 
-let tableId = 0;
+let tableId = -1;
 const tables = [];
 
 let position = 0;
@@ -19,7 +19,8 @@ let position = 0;
 //     inProgress: bool,
 //     dealer: Number,
 //     deck: [].
-//     pot: Number
+//     pot: Number,
+//     inAction: Number
 // }
 
 //Player
@@ -38,15 +39,12 @@ let position = 0;
 server.on('connection', (socket) => {
     socket.on('message', (message) => {
         const msg = JSON.parse(message);
-        // console.log(msg);
         if (msg.type == 'init') {
+            let myTableId;
             if (clients.length > 0) {
-                console.log(clients);
-                
-                let usedIds = clients.map(x => x.id);
-                
-                for (let i = 1; i < Math.max(...clients.map(x=>x.id))+2; i++) {
-                    console.log(i);
+                // console.log(clients);
+                let usedIds = clients.map(x => x.clientId);
+                for (let i = 1; i < Math.max(...clients.map(x=>x.clientId))+2; i++) {
                     if (!usedIds.includes(i)) {
                         clientId = i;
                         break;
@@ -55,38 +53,37 @@ server.on('connection', (socket) => {
             } else {
                 clientId=1;
             }
-            console.log('init: new user connecting...');
-            
 
             if (tables.length > 0 && tables.find(x=>x.players.length < 10)!=null) {
                 let lasttable = tables.find(x=>x.players.length < 10);
                 let usedPositions = lasttable.players.map(x => x.position);
-                // console.log(usedPositions);
                 for (let i = 0; i < 10; i++) {
                     if (!usedPositions.includes(i)) {
                         position = i;
-                        break;
+                        break; // find free position at table and put user there
                     }
                 }
-
+                myTableId = tables.findIndex(x=>x.tableId==lasttable.tableId);
+                
                 lasttable.players.push({
                     'socket': socket,
-                    'id': clientId,
+                    'clientId': clientId,
                     'name': msg.userName,
-                    'table': tableId,
+                    'table': myTableId,
                     'position': position,
                 })
             } else {
                 // create new table
                 tableId++;
+                myTableId = tableId;
                 position = 0
                 tables.push({
                     tableId: tableId, players: [
                         {
                             'socket': socket,
-                            'id': clientId,
+                            'clientId': clientId,
                             'name': msg.userName,
-                            'table': tableId,
+                            'table': myTableId,
                             'position': position
                         }],
                     inProgress: false
@@ -94,53 +91,58 @@ server.on('connection', (socket) => {
             }
             clients.push({
                 'socket': socket,
-                'id': clientId,
+                'clientId': clientId,
                 'name': msg.userName,
-                'table': tableId,
+                'table': myTableId,
                 'position': position
             });
-            // console.log(clients);
-            let userList = [];
+            
             let currTable = tables.find(x => x.tableId == tableId);
-            currTable.players.forEach(player => {
-                userList.push({
-                    userId: player.id,
-                    userName: player.name,
-                    position: player.position
-                })
-            })
-
-            console.log(`init: User ${clientId} connected to table ${tableId} at position ${position}`);
-
+            let userList = getUserList(currTable);
+            
             socket.send(JSON.stringify({
                 type: 'init',
                 userId: clientId,
-                position: position
+                position: position,
+                tableId: myTableId,
+                userList: userList
             }))
-
-            broadcastToTable(currTable, { type: 'join', userId:clientId, userName: msg.userName, tableId, position: position });
-            broadcastToTable(currTable, { type: 'userlist', userList: userList })
+            
+            broadcastToTable(currTable, { type: 'join', userId:clientId, userName: msg.userName, tableId: myTableId, position: position });
+            // broadcastToTable(currTable, { type: 'userlist', userList: userList, tableId: myTableId })
+            
+            console.log(`init: User ${clientId} connected to table ${tableId} at position ${position}`);
             return;
         }
 
         // console.log(msg);
-        let currTable = tables.find(x => x.players.find(x=>x.id == msg.userId) != null);
+        let currTable = tables.find(x => x.players.findIndex(x=>x.clientId == msg.userId) != -1);
         if (msg.type == 'disc') {
-            // console.log(currTable);
-            let user = currTable.players.find(x => x.id == msg.userId);
-            console.log('dc: user '+user.id+' disconnecting...');
-            user.socket.close();
-            currTable.players.splice(currTable.players.indexOf(user), 1)
-            clients.splice(clients.findIndex(x=>x.id == user.id), 1)
-            broadcastToTable(currTable, { type: 'disced', userId: msg.userId, userName: msg.userName })
-            console.log('dc: User '+user.id+' disconnect successful');
+            if (currTable != null) {
+                let user = currTable.players.find(x => x.clientId == msg.userId);
+                user.socket.close();
+                currTable.players.splice(currTable.players.indexOf(user), 1)
+                clients.splice(clients.findIndex(x=>x.clientId == user.clientId), 1)
+                broadcastToTable(currTable, { type: 'disc', userId: msg.userId, userName: msg.userName })
+                console.log('dc: User '+user.clientId+' disconnect successful');
+            }else{
+                console.error('dc: disconnect failed');
+            }
             return;
         }
         if (msg.type == 'ready') {
-            console.log(`Table ${currTable.tableId} `);
-            currTable.inProgress = true;
-            currTable.deck = getFreshDeck();
-            broadcastToTable(currTable, {type: 'start', dealer: getNextDealer(currTable)})
+            if (currTable != null) {
+                console.log(`ready: Table ${currTable.tableId} started the game`);
+                currTable.inProgress = true;
+                currTable.deck = getFreshDeck();
+                let userList = getUserList(currTable);
+                let dealer = getNextDealer(currTable);
+                currTable.pot = 1500;
+                broadcastToTable(currTable, {type: 'ready', dealer: dealer, userList: userList})    
+                broadcastToTable(currTable, {type: 'upnext', position: getNextPlayer(currTable)});
+            }else{
+                console.error('ready: table cannot be readied')
+            }
             return;
         }
         if (msg.type == '') {
@@ -149,6 +151,18 @@ server.on('connection', (socket) => {
         }
     })
 })
+
+const getUserList = (currTable) =>{
+    let userList = [];
+    currTable.players.forEach(client => {
+        userList.push({
+            userId: client.clientId,
+            userName: client.name,
+            position: client.position
+        })
+    })
+    return userList;
+}
 
 const getFreshDeck = ()=>{
     const suits = ['♣', '♠', '♥', '♦'];
@@ -180,6 +194,28 @@ const getNextDealer = (table)=>{
         }
     }
 }
+
+const getNextPlayer = (table)=>{
+    if (table.inAction == null) {
+        return decideFirstToAct(table);
+    }else{
+        if (table.inAction+1 < table.players.length) {
+            return table.dealer+1;
+        }else{
+            return 0;
+        }
+    }
+}
+
+const decideFirstToAct = (table)=>{
+    let playerCount = table.players.length;
+    if (playerCount>3) {
+        return 3;
+    }else{
+        return 0
+    }
+}
+
 
 server.on('close', () => {
 })
