@@ -41,9 +41,19 @@ server.on('connection', (socket) => {
         // console.log(msg);
         if (msg.type == 'init') {
             if (clients.length > 0) {
-                clientId = Math.max(...clients.map(x => x.id)) + 1;
+                console.log(clients);
+                
+                let usedIds = clients.map(x => x.id);
+                
+                for (let i = 1; i < Math.max(...clients.map(x=>x.id))+2; i++) {
+                    console.log(i);
+                    if (!usedIds.includes(i)) {
+                        clientId = i;
+                        break;
+                    }
+                }
             } else {
-                clientId = 1;
+                clientId=1;
             }
             console.log('init: new user connecting...');
             
@@ -51,10 +61,9 @@ server.on('connection', (socket) => {
             if (tables.length > 0 && tables.find(x=>x.players.length < 10)!=null) {
                 let lasttable = tables.find(x=>x.players.length < 10);
                 let usedPositions = lasttable.players.map(x => x.position);
-                console.log(usedPositions);
-                
+                // console.log(usedPositions);
                 for (let i = 0; i < 10; i++) {
-                    if (!usedPositions.contains(i)) {
+                    if (!usedPositions.includes(i)) {
                         position = i;
                         break;
                     }
@@ -109,7 +118,7 @@ server.on('connection', (socket) => {
                 position: position
             }))
 
-            broadcastToTable(currTable, { type: 'join', userId:clientId, tableId, position: position });
+            broadcastToTable(currTable, { type: 'join', userId:clientId, userName: msg.userName, tableId, position: position });
             broadcastToTable(currTable, { type: 'userlist', userList: userList })
             return;
         }
@@ -121,11 +130,14 @@ server.on('connection', (socket) => {
             let user = currTable.players.find(x => x.id == msg.userId);
             console.log('dc: user '+user.id+' disconnecting...');
             user.socket.close();
+            currTable.players.splice(currTable.players.indexOf(user), 1)
+            clients.splice(clients.findIndex(x=>x.id == user.id), 1)
             broadcastToTable(currTable, { type: 'disced', userId: msg.userId, userName: msg.userName })
             console.log('dc: User '+user.id+' disconnect successful');
             return;
         }
         if (msg.type == 'ready') {
+            console.log(`Table ${currTable.tableId} `);
             currTable.inProgress = true;
             currTable.deck = getFreshDeck();
             broadcastToTable(currTable, {type: 'start', dealer: getNextDealer(currTable)})
