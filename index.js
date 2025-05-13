@@ -11,10 +11,25 @@ let tableId = 0;
 const tables = [];
 
 let position = 0;
-// {
+
+// Table 
+//{
 //     tableId: Number,
 //     players: Player[],
-//     inProgress: bool
+//     inProgress: bool,
+//     dealer: Number,
+//     deck: [].
+//     pot: Number
+// }
+
+//Player
+// {
+//     'socket': socket,
+//     'id': Number,
+//     'name': string,
+//     'table': number,
+//     'position': number,
+//     'hand': []
 // }
 
 // max players at a table: 10
@@ -27,8 +42,6 @@ server.on('connection', (socket) => {
         if (msg.type == 'init') {
             if (clients.length > 0) {
                 clientId = Math.max(...clients.map(x => x.id)) + 1;
-            } else if (clientId <= 0) {
-                clientId++;
             } else {
                 clientId = 1;
             }
@@ -51,7 +64,8 @@ server.on('connection', (socket) => {
                     'id': clientId,
                     'name': msg.userName,
                     'table': tableId,
-                    'position': position
+                    'position': position,
+
                 })
             } else {
                 // create new table
@@ -93,27 +107,60 @@ server.on('connection', (socket) => {
                 position: position
             }))
 
-            currTable.players.forEach(player => {
-                player.socket.send(JSON.stringify({ type: 'join', userId:clientId, position: position }));
-            })
-            // currTable.players.forEach(player => {
-            //     player.socket.send(JSON.stringify({ type: 'userlist', userList: userList }));
-            // })
+            broadcastToTable(currTable, { type: 'join', userId:clientId, position: position });
+            broadcastToTable(currTable, { type: 'userlist', userList: userList })
+            return;
         }
+
+        let currTable = tables.find(x => x.tableId == msg.tableId);
         if (msg.type == 'disc') {
-            // console.log(clients);
-            // console.log(msg);
-            let currTable = tables.find(x => x.tableId == msg.tableId);
             currTable.players.find(x => x.id == msg.userId).socket.close();
-            currTable.players.forEach(client => {
-                client.socket.send(JSON.stringify({ type: 'disced', userId: msg.userId, userName: msg.userName }))
-            })
+            broadcastToTable(currTable, { type: 'disced', userId: msg.userId, userName: msg.userName })
+            return;
         }
-        if (msg.type == 'start') {
-            tables.find(x => x.tableId == msg.tableId).inProgress = true;
+        if (msg.type == 'ready') {
+            currTable.inProgress = true;
+            currTable.deck = getFreshDeck();
+            broadcastToTable(currTable, {type: 'start', dealer: getNextDealer(currTable)})
+            return;
+        }
+        if (msg.type == '') {
+            
+            return;
         }
     })
 })
+
+const getFreshDeck = ()=>{
+    const suits = ['♣', '♠', '♥', '♦'];
+    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    let deck = [];
+    suits.forEach(suit => {
+        ranks.forEach(rank => {
+            deck.push(suit+rank);
+        });
+    });
+    //return shuffled deck
+    return deck.map(value => ({ value, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map(({ value }) => value);
+}
+
+const broadcastToTable = (table, message)=>{
+    table.players.forEach(client => {
+        client.socket.send(JSON.stringify(message))
+    })
+}
+
+const getNextDealer = (table)=>{
+    if (table.dealer == null) {
+        return 0;
+    }else{
+        if (table.dealer+1 <= table.players.length) {
+            return table.dealer+1;
+        }else{
+            return 0;
+        }
+    }
+}
 
 server.on('close', () => {
 })
