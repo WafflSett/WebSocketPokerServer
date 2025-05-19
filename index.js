@@ -115,7 +115,7 @@ server.on('connection', (socket) => {
                 tableId: myTableId,
                 userList: userList
             }))
-            broadcastToTable(currTable, { type: 'join', userId: clientId, userName: msg.userName, tableId: myTableId, position: position });
+            broadcastToTable(currTable, { type: 'join', userId: clientId, userName: msg.userName, tableId: myTableId, position: position, userList: userList});
             console.log(`init: U${clientId} conn. to T${tableId} @pos ${position}`);
             return;
         }
