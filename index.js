@@ -113,7 +113,8 @@ server.on('connection', (socket) => {
                 userId: clientId,
                 position: position,
                 tableId: myTableId,
-                userList: userList
+                userList: userList,
+                inProgress: currTable.inProgress
             }))
             broadcastToTable(currTable, { type: 'join', userId: clientId, userName: msg.userName, tableId: myTableId, position: position });
             console.log(`init: U${clientId} conn. to T${tableId} @pos ${position}`);
