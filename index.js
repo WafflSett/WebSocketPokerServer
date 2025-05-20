@@ -12,6 +12,7 @@ const tables = [];
 
 let position = 0;
 let blind = 1000;
+let defBalance = 10000;
 
 // Table 
 //{
@@ -36,7 +37,8 @@ let blind = 1000;
 //     'position': number,
 //     'hand': [],
 //     'isPlaying': bool,
-//     'bet': number
+//     'bet': number,
+//     'balance' : number
 // }
 
 // max players at a table: 10
@@ -92,7 +94,8 @@ server.on('connection', (socket) => {
                             'clientId': clientId,
                             'name': msg.userName,
                             'tableId': myTableId,
-                            'position': position
+                            'position': position,
+                            'balance': defBalance
                         }],
                     inProgress: false
                 })
@@ -102,7 +105,8 @@ server.on('connection', (socket) => {
                 'clientId': clientId,
                 'name': msg.userName,
                 'tableId': myTableId,
-                'position': position
+                'position': position,
+                'balance' : defBalance
             });
 
             let currTable = tables.find(x => x.tableId == tableId);
@@ -114,7 +118,8 @@ server.on('connection', (socket) => {
                 position: position,
                 tableId: myTableId,
                 userList: userList,
-                inProgress: currTable.inProgress
+                inProgress: currTable.inProgress,
+                balance: defBalance
             }))
             broadcastToTable(currTable, { type: 'join', userId: clientId, userName: msg.userName, tableId: myTableId, position: position, userList: userList});
             console.log(`init: U${clientId} conn. to T${tableId} @pos ${position}`);
@@ -131,6 +136,7 @@ server.on('connection', (socket) => {
                 }
                 user.socket.close();
                 currTable.players.splice(currTable.players.indexOf(user), 1)
+                saveTable(currTable);
                 clients.splice(clients.findIndex(x => x.clientId == user.clientId), 1)
                 broadcastToTable(currTable, { type: 'disc', userId: msg.userId, userName: msg.userName, position: msg.position })
                 console.log('dc: U' + user.clientId + ' disconnect successful');
@@ -154,6 +160,7 @@ server.on('connection', (socket) => {
             currPlayer.isPlaying = false;
             currTable.pot += currPlayer.bet;
             currTable.inPlay--;
+            savePlayer(currTable, currPlayer);
             endPlayerTurn(currTable);
             return;
         }
@@ -162,6 +169,8 @@ server.on('connection', (socket) => {
             if (currPlayer.bet > currTable.runningBet) {
                 currTable.runningBet = currPlayer.bet
             }
+            currPlayer.balance-=currPlayer.bet;
+            savePlayer(currTable, currPlayer);
             console.log(`bet: T${currPlayer.tableId} - U${currPlayer.clientId}@pos${currPlayer.position} bets ${msg.bet}, total: ${currPlayer.bet} `);
             endPlayerTurn(currTable);
             return;
@@ -171,6 +180,7 @@ server.on('connection', (socket) => {
             if (currPlayer.bet > currTable.runningBet) {
                 currTable.runningBet = currPlayer.bet
             }
+            savePlayer(currTable, currPlayer);
             console.log(`blind: T${currPlayer.tableId} - U${currPlayer.clientId}@pos${currPlayer.position} bets ${msg.bet}, total: ${currPlayer.bet} `);
         }
         if (msg.type == 'check') {
@@ -186,12 +196,17 @@ const saveTable = (currTable)=>{
     tables[tables.findIndex(x=>x.tableId==currTable.tableId)] = currTable;
 }
 
+const savePlayer = (currTable, currPlayer)=>{
+    let tableIndex = tables.findIndex(x=>x.tableId==currTable.tableId);
+    tables[tableIndex].players[tables[tableIndex].players.findIndex(x=>x.clientId == currPlayer.clientId)] = currPlayer;
+}
+
 //return true if there are no remaining players
 const checkGameOver = (currTable) => {
     if (currTable.inPlay < 2) {
         try {
-            let winnerId = currTable.players.find(x => x.isPlaying == true).clientId;
-            broadcastToTable(currTable, { type: 'win', clientId: winnerId });
+            let winner = currTable.players.find(x => x.isPlaying == true)
+            broadcastToTable(currTable, { type: 'win', clientId: winner.clientId, position: winner.position});
             console.log(`win: T${currTable.tableId} - U${winnerId} won the round`);
         } catch (error) {
             console.log(`error: T${currTable.tableId} has no players left`);
@@ -222,7 +237,7 @@ const startTable = (currTable) => {
     // send send the dealer's placement, the minimum bet, and the list of all users at the table
     broadcastToTable(currTable, { type: 'ready', dealer: getNextDealer(currTable), userList: getUserList(currTable), bet: blind })
     // send green light to next player
-    broadcastToTable(currTable, { type: 'upnext', position: getNextPlayer(currTable), pot: currTable.pot, runningBet: currTable.runningBet });
+    broadcastToTable(currTable, { type: 'upnext', position: getNextPlayer(currTable), pot: currTable.pot, runningBet: currTable.runningBet, userList:getUserList(currTable) });
     console.log(`start: T${currTable.tableId} - started the game`);
     saveTable(currTable);
 }
@@ -241,7 +256,7 @@ const endPlayerTurn = (currTable) => {
         if (!checkEndOfRound(currTable)) {  // check if there is another bet to be made -> no=>true, yes=>false
             // send green light to next player
             let nextPosition = getNextPlayer(currTable);
-            broadcastToTable(currTable, { type: 'upnext', position: nextPosition, pot: currTable.pot, runningBet: currTable.runningBet });
+            broadcastToTable(currTable, { type: 'upnext', position: nextPosition, pot: currTable.pot, runningBet: currTable.runningBet, userList: getUserList(currTable) });
             console.log(`action: T${currTable.tableId} - p${nextPosition} takes action`);
         } else {
             newRound(currTable);
@@ -271,8 +286,8 @@ const newRound = (currTable) => {
     }
     currTable.inAction = currTable.dealer;
     console.log(`roundend: T${currTable.tableId} ended betting, CC: ${currTable.communityCards}`);
-    broadcastToTable(currTable, { type: 'roundend', hand: currTable.communityCards, position: getNextPlayer(currTable) }) //using hand again so the TS is not too cluttered xdd
-    broadcastToTable(currTable, { type: 'upnext', position: getNextPlayer(currTable), pot: currTable.pot, runningBet: currTable.runningBet });
+    broadcastToTable(currTable, { type: 'roundend', hand: currTable.communityCards }) //using hand again so the TS is not too cluttered xdd
+    broadcastToTable(currTable, { type: 'upnext', position: getNextPlayer(currTable), pot: currTable.pot, runningBet: currTable.runningBet, userList: getUserList(currTable) });
     saveTable(currTable);
 }
 
@@ -282,7 +297,8 @@ const getUserList = (currTable) => {
         userList.push({
             userId: client.clientId,
             userName: client.name,
-            position: client.position
+            position: client.position,
+            bet: client.bet
         })
     })
     return userList;

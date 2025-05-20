@@ -13,3 +13,6 @@ Server sends:
 -'disc': returns disconnect notification to players at dc's table
 -'join': returns freshly joined user's info to specified table
 -'ready': returns dealer's position + sets table inProgress to true
+-'upnext': return next player's position, pot, runningBet and list of users at the table
+-'roundend': returns communityCards, signals end of betting round
+-'win': returns id and position of player who won
