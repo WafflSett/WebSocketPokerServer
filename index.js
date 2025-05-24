@@ -110,7 +110,7 @@ server.on('connection', (socket) => {
             });
 
             let currTable = tables.find(x => x.tableId == tableId);
-            let userList = getUserList(currTable);
+            let userList = getUserList(currTable.tableId);
 
             socket.send(JSON.stringify({
                 type: 'init',
@@ -121,22 +121,22 @@ server.on('connection', (socket) => {
                 inProgress: currTable.inProgress,
                 balance: defBalance
             }))
-            broadcastToTable(currTable, { type: 'join', userId: clientId, userName: msg.userName, tableId: myTableId, position: position, userList: userList, inProgress: currTable.inProgress });
+            broadcastToTable(currTable.tableId, { type: 'join', userId: clientId, userName: msg.userName, tableId: myTableId, position: position, userList: userList, inProgress: currTable.inProgress });
             console.log(`init: U${clientId} conn. to T${tableId} @pos ${position}`);
             return;
         }
 
         // console.log(msg);
-        let currTable = tables.find(x => x.players.findIndex(x => x.clientId == msg.userId) != -1);
+        let currTable = tables.findIndex(x => x.players.findIndex(x => x.clientId == msg.userId) != -1);
         if (msg.type == 'disc') {
             if (currTable != null) {
-                let user = currTable.players.find(x => x.clientId == msg.userId);
+                let user = tables[currTable].players.find(x => x.clientId == msg.userId);
                 if (user.isPlaying) {
-                    currTable.inPlay--;
+                    tables[currTable].inPlay--;
                 }
                 user.socket.close();
-                currTable.players.splice(currTable.players.indexOf(user), 1)
-                saveTable(currTable);
+                tables[currTable].players.splice(tables[currTable].players.indexOf(user), 1)
+                // saveTable(currTable);
                 clients.splice(clients.findIndex(x => x.clientId == user.clientId), 1)
                 broadcastToTable(currTable, { type: 'disc', userId: msg.userId, userName: msg.userName, position: msg.position })
                 console.log('dc: U' + user.clientId + ' disconnect successful');
@@ -147,70 +147,70 @@ server.on('connection', (socket) => {
             return;
         }
         if (msg.type == 'ready') {
-            if (currTable != null && currTable.players.length >= 2) {
+            if (currTable != null && tables[currTable].players.length >= 2) {
                 startTable(currTable);
             } else {
                 console.error('ready: table cannot be readied')
             }
             return;
         }
-        let currPlayer = currTable.players.find(x => x.clientId == msg.userId)
+        let currPlayer = tables[currTable].players.findIndex(x => x.clientId == msg.userId);
         if (msg.type == 'fold') {
-            console.log(`fold: User ${currPlayer.clientId} folds, surrendering their cards, at table ${currPlayer.tableId}`);
-            currPlayer.isPlaying = false;
-            currTable.pot += currPlayer.bet;
-            currTable.inPlay--;
-            savePlayer(currTable, currPlayer);
+            console.log(`fold: User ${tables[currTable].players[currPlayer].clientId} folds, surrendering their cards, at table ${tables[currTable].players[currPlayer].tableId}`);
+            tables[currTable].players[currPlayer].isPlaying = false;
+            tables[currTable].pot += tables[currTable].players[currPlayer].bet;
+            tables[currTable].inPlay--;
+            // savePlayer(currTable, currPlayer);
             endPlayerTurn(currTable);
             return;
         }
         if (msg.type == 'bet') {
-            currPlayer.bet += msg.bet;
-            if (currPlayer.bet > currTable.runningBet) {
-                currTable.runningBet = currPlayer.bet
+            tables[currTable].players[currPlayer].bet += msg.bet;
+            if (tables[currTable].players[currPlayer].bet > tables[currTable].runningBet) {
+                tables[currTable].runningBet = tables[currTable].players[currPlayer].bet
             }
-            currPlayer.balance -= currPlayer.bet;
-            savePlayer(currTable, currPlayer);
-            console.log(`bet: T${currPlayer.tableId} - U${currPlayer.clientId}@pos${currPlayer.position} bets ${msg.bet}, total: ${currPlayer.bet} `);
+            tables[currTable].players[currPlayer].balance -= tables[currTable].players[currPlayer].bet;
+            // savePlayer(currTable, currPlayer);
+            console.log(`bet: T${tables[currTable].players[currPlayer].tableId} - U${tables[currTable].players[currPlayer].clientId}@pos${tables[currTable].players[currPlayer].position} bets ${msg.bet}, total: ${tables[currTable].players[currPlayer].bet} `);
             endPlayerTurn(currTable);
             return;
         }
         if (msg.type == 'blind') {
-            currPlayer.bet += msg.bet;
-            if (currPlayer.bet > currTable.runningBet) {
-                currTable.runningBet = currPlayer.bet
+            tables[currTable].players[currPlayer].bet += msg.bet;
+            if (tables[currTable].players[currPlayer].bet > tables[currTable].runningBet) {
+                tables[currTable].runningBet = tables[currTable].players[currPlayer].bet
             }
-            savePlayer(currTable, currPlayer);
-            console.log(`blind: T${currPlayer.tableId} - U${currPlayer.clientId}@pos${currPlayer.position} bets ${msg.bet}, total: ${currPlayer.bet} `);
+            // savePlayer(currTable, currPlayer);
+            console.log(`blind: T${tables[currTable].players[currPlayer].tableId} - U${tables[currTable].players[currPlayer].clientId}@pos${tables[currTable].players[currPlayer].position} bets ${msg.bet}, total: ${tables[currTable].players[currPlayer].bet} `);
             return;
         }
         if (msg.type == 'check') {
-            console.log(`check: T${currPlayer.tableId} - U${currPlayer.clientId}@post${currPlayer.position} checks`);
+            console.log(`check: T${tables[currTable].players[currPlayer].tableId} - U${tables[currTable].players[currPlayer].clientId}@post${tables[currTable].players[currPlayer].position} checks`);
             endPlayerTurn(currTable);
             return;
         }
-        saveTable(currTable);
+        // saveTable(currTable);
     })
 })
 
-const saveTable = (currTable) => {
-    tables[tables.findIndex(x => x.tableId == currTable.tableId)] = currTable;
-}
+// const saveTable = (currTable) => {
+//     tables[tables.findIndex(x => x.tableId == tables[currTable].tableId)] = currTable;
+// }
 
-const savePlayer = (currTable, currPlayer) => {
-    let tableIndex = tables.findIndex(x => x.tableId == currTable.tableId);
-    tables[tableIndex].players[tables[tableIndex].players.findIndex(x => x.clientId == currPlayer.clientId)] = currPlayer;
-}
+// const savePlayer = (currTable, currPlayer) => {
+//     let tableIndex = tables.findIndex(x => x.tableId == tables[currTable].tableId);
+//     tables[tableIndex].players[tables[tableIndex].players.findIndex(x => x.clientId == tables[currTable].players[currPlayer].clientId)] = currPlayer;
+// }
 
 //return true if there are no remaining players
 const checkGameOver = (currTable) => {
-    if (currTable.inPlay < 2) {
+    if (tables[currTable].inPlay < 2) {
         try {
-            let winner = currTable.players.find(x => x.isPlaying == true)
+            let winner = tables[currTable].players.find(x => x.isPlaying == true)
             broadcastToTable(currTable, { type: 'win', clientId: winner.clientId, position: winner.position });
-            console.log(`win: T${currTable.tableId} - U${winnerId} won the round`);
+            console.log(`win: T${tables[currTable].tableId} - U${winnerId} won the round`);
         } catch (error) {
-            console.log(`error: T${currTable.tableId} has no players left`);
+            console.log(`error: T${tables[currTable].tableId} has no players left`);
         }
         resetTable(currTable);
         return true;
@@ -219,34 +219,34 @@ const checkGameOver = (currTable) => {
 }
 
 const resetTable = (currTable) => {
-    console.log(`reset: T${currTable.tableId} has been reset`);
-    currTable.inProgress = false;
-    currTable.pot = 0;
-    currTable.runningBet = 0;
-    saveTable(currTable);
+    console.log(`reset: T${tables[currTable].tableId} has been reset`);
+    tables[currTable].inProgress = false;
+    tables[currTable].pot = 0;
+    tables[currTable].runningBet = 0;
+    // saveTable(currTable);
 }
 
 const startTable = (currTable) => {
-    currTable.inProgress = true;
-    currTable.deck = getFreshDeck();
-    currTable.inPlay = currTable.players.length;
+    tables[currTable].inProgress = true;
+    tables[currTable].deck = getFreshDeck();
+    tables[currTable].inPlay = tables[currTable].players.length;
     // in case someone else joins or leaves, we dont want to fuck up positions, still requires more refining
-    currTable.pot = 0;
-    currTable.runningBet = blind;
+    tables[currTable].pot = 0;
+    tables[currTable].runningBet = blind;
     //deal 2 cards to each player after small and big blind forced bets
     sendPrivateHands(currTable);    // IMPORTANT: ALSO SETS PLAYER.isPlaying TO TRUE
     // send send the dealer's placement, the minimum bet, and the list of all users at the table
     broadcastToTable(currTable, { type: 'ready', dealer: getNextDealer(currTable), userList: getUserList(currTable), bet: blind })
     // send green light to next player
-    broadcastToTable(currTable, { type: 'upnext', position: getNextPlayer(currTable), pot: currTable.pot, runningBet: currTable.runningBet, userList: getUserList(currTable) });
-    console.log(`start: T${currTable.tableId} - started the game`);
-    saveTable(currTable);
+    broadcastToTable(currTable, { type: 'upnext', position: getNextPlayer(currTable), pot: tables[currTable].pot, runningBet: tables[currTable].runningBet, userList: getUserList(currTable) });
+    console.log(`start: T${tables[currTable].tableId} - started the game`);
+    // saveTable(currTable);
 }
 
 const checkEndOfRound = (currTable) => {
     // check how many different bets are in play
     // once they are all the same: end the round
-    if ([...new Set(currTable.players.filter(x => x.isPlaying == true).map(x => x.bet))].length == 1) {
+    if ([...new Set(tables[currTable].players.filter(x => x.isPlaying == true).map(x => x.bet))].length == 1) {
         return true
     }
     return false;
@@ -257,8 +257,8 @@ const endPlayerTurn = (currTable) => {
         if (!checkEndOfRound(currTable)) {  // check if there is another bet to be made -> no=>true, yes=>false
             // send green light to next player
             let nextPosition = getNextPlayer(currTable);
-            broadcastToTable(currTable, { type: 'upnext', position: nextPosition, pot: currTable.pot, runningBet: currTable.runningBet, userList: getUserList(currTable) });
-            console.log(`action: T${currTable.tableId} - p${nextPosition} takes action`);
+            broadcastToTable(currTable, { type: 'upnext', position: nextPosition, pot: tables[currTable].pot, runningBet: tables[currTable].runningBet, userList: getUserList(currTable) });
+            console.log(`action: T${tables[currTable].tableId} - p${nextPosition} takes action`);
         } else {
             newRound(currTable);
         }
@@ -271,30 +271,30 @@ const showDown = (currTable) => {
 
 const newRound = (currTable) => {
     // add each players bet to the pot
-    currTable.players.forEach(x => {
-        currTable.pot += x.bet;
+    tables[currTable].players.forEach(x => {
+        tables[currTable].pot += x.bet;
         x.bet = 0;
     })
     // based on gamestate lay out community cards and begin another round of betting
-    if (currTable.communityCards == null) {
-        currTable.communityCards = drawCards(currTable, 3);
-    } else if (currTable.communityCards.length == 5) {
+    if (tables[currTable].communityCards == null) {
+        tables[currTable].communityCards = drawCards(currTable, 3);
+    } else if (tables[currTable].communityCards.length == 5) {
         //SHOWDOWN
         showDown(currTable);
         return;
-    } else if (currTable.communityCards.length >= 3) {
-        currTable.communityCards.push(drawCards(currTable, 1)[0]);
+    } else if (tables[currTable].communityCards.length >= 3) {
+        tables[currTable].communityCards.push(drawCards(currTable, 1)[0]);
     }
-    currTable.inAction = currTable.dealer;
-    console.log(`roundend: T${currTable.tableId} ended betting, CC: ${currTable.communityCards}`);
-    broadcastToTable(currTable, { type: 'roundend', hand: currTable.communityCards }) //using hand again so the TS is not too cluttered xdd
-    broadcastToTable(currTable, { type: 'upnext', position: getNextPlayer(currTable), pot: currTable.pot, runningBet: currTable.runningBet, userList: getUserList(currTable) });
-    saveTable(currTable);
+    tables[currTable].inAction = tables[currTable].dealer;
+    console.log(`roundend: T${tables[currTable].tableId} ended betting, CC: ${tables[currTable].communityCards}`);
+    broadcastToTable(currTable, { type: 'roundend', hand: tables[currTable].communityCards }) //using hand again so the TS is not too cluttered xdd
+    broadcastToTable(currTable, { type: 'upnext', position: getNextPlayer(currTable), pot: tables[currTable].pot, runningBet: tables[currTable].runningBet, userList: getUserList(currTable) });
+    // saveTable(currTable);
 }
 
 const getUserList = (currTable) => {
     let userList = [];
-    currTable.players.forEach(client => {
+    tables[currTable].players.forEach(client => {
         userList.push({
             userId: client.clientId,
             userName: client.name,
@@ -318,25 +318,25 @@ const getFreshDeck = () => {
     return deck.map(value => ({ value, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map(({ value }) => value);
 }
 
-const broadcastToTable = (table, message) => {
-    table.players.forEach(client => {
+const broadcastToTable = (currTable, message) => {
+    tables[currTable].players.forEach(client => {
         client.socket.send(JSON.stringify(message))
     })
 }
 
-const getNextDealer = (table) => {
-    if (table.dealer == null) {
-        table.dealer = 0;
+const getNextDealer = (currTable) => {
+    if (tables[currTable].dealer == null) {
+        tables[currTable].dealer = 0;
         return 0;
     } else {
         let failsafe = 0;
         do {
-            if (table.dealer + 1 < table.players.length) {
-                table.dealer++;
+            if (tables[currTable].dealer + 1 < tables[currTable].players.length) {
+                tables[currTable].dealer++;
             } else {
-                table.dealer = 0;
+                tables[currTable].dealer = 0;
             }
-            if (checkPlayerIsPlaying(table.players, table.inAction)) {
+            if (checkPlayerIsPlaying(tables[currTable].players, tables[currTable].inAction)) {
                 break;
             }
 
@@ -344,9 +344,9 @@ const getNextDealer = (table) => {
             if (failsafe > 20) {
                 break;
             }
-        } while (table.players.find(x => x.position == table.inAction) != null && table.players)
-        console.log(`dealer: T${table.tableId} - P${table.inAction} is the next dealer`);
-        return table.inAction;
+        } while (tables[currTable].players.find(x => x.position == tables[currTable].inAction) != null && tables[currTable].players)
+        console.log(`dealer: T${tables[currTable].tableId} - P${tables[currTable].inAction} is the next dealer`);
+        return tables[currTable].inAction;
     }
 }
 
@@ -359,60 +359,60 @@ const checkPlayerIsPlaying = (players, position) => {
 }
 
 const drawCards = (currTable, n) => {
-    currTable.deck.pop(); // burn first card
+    tables[currTable].deck.pop(); // burn first card
     let cards = [];
     for (let i = 0; i < n; i++) {
-        if (currTable.deck.length > 0) {
-            cards.push(currTable.deck.pop())
+        if (tables[currTable].deck.length > 0) {
+            cards.push(tables[currTable].deck.pop())
         } else {
-            currTable.deck = getFreshDeck();
-            cards.push(currTable.deck.pop())
+            tables[currTable].deck = getFreshDeck();
+            cards.push(tables[currTable].deck.pop())
         }
     }
-    saveTable(currTable);
+    // saveTable(currTable);
     return cards;
 }
 
 // IMPORTANT: THIS ALSO SETS PLAYER.isPlaying TO TRUE
 const sendPrivateHands = (currTable) => {
-    currTable.players.forEach(user => {
+    tables[currTable].players.forEach(user => {
         user.bet = 0;
         user.isPlaying = true;
         user.hand = drawCards(currTable, 2)
         user.socket.send(JSON.stringify({ type: 'hand', hand: user.hand }))
     });
-    saveTable(currTable)
+    // saveTable(currTable)
 }
 
 const getNextPlayer = (currTable) => {
-    if (currTable.inAction == null) {
-        currTable.inAction = decideFirstToAct(currTable);
-        saveTable(currTable);
-        return currTable.inAction;
+    if (tables[currTable].inAction == null) {
+        tables[currTable].inAction = decideFirstToAct(currTable);
+        // saveTable(currTable);
+        return tables[currTable].inAction;
     } else {
         let failsafe = 0;
         do {
-            if (currTable.inAction + 1 < currTable.players.length) {
-                currTable.inAction++;
+            if (tables[currTable].inAction + 1 < tables[currTable].players.length) {
+                tables[currTable].inAction++;
             } else {
-                currTable.inAction = 0;
+                tables[currTable].inAction = 0;
             }
-            if (checkPlayerIsPlaying(currTable.players, currTable.inAction)) {
+            if (checkPlayerIsPlaying(tables[currTable].players, tables[currTable].inAction)) {
                 break;
             }
             failsafe++;
             if (failsafe > 20) {
                 break;
             }
-        } while (currTable.players.find(x => x.position == currTable.inAction) != null && currTable.players)
-        saveTable(currTable)
-        console.log(`action: T${currTable.tableId} - P${currTable.inAction} takes action`);
-        return currTable.inAction;
+        } while (tables[currTable].players.find(x => x.position == tables[currTable].inAction) != null && tables[currTable].players)
+        // saveTable(currTable)
+        console.log(`action: T${tables[currTable].tableId} - P${tables[currTable].inAction} takes action`);
+        return tables[currTable].inAction;
     }
 }
 
 const decideFirstToAct = (currTable) => {
-    let playerCount = currTable.players.length;
+    let playerCount = tables[currTable].players.length;
     if (playerCount > 3) {
         return 3;
     } else {
