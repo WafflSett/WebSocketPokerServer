@@ -299,7 +299,8 @@ const getUserList = (currTable) => {
             userId: client.clientId,
             userName: client.name,
             position: client.position,
-            bet: client.bet
+            bet: client.bet,
+            isPlaying: client.isPlaying
         })
     })
     return userList;
