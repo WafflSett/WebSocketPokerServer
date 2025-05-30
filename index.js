@@ -217,7 +217,7 @@ const checkGameOver = (currTable) => {
             let winner = tables[currTable].players.find(x => x.isPlaying == true)
             collectPot(currTable);
             // tables[currTable].players.find(x=>x.clientId==winner.clientId).balance+=tables[currTable].pot;
-            broadcastToTable(currTable, { type: 'win', pot: tables[currTable].pot, clientId: winner.clientId, position: winner.position, userName: winner.userName, userList: getUserList(currTable) });
+            broadcastToTable(currTable, { type: 'win', pot: tables[currTable].pot, clientId: winner.clientId, position: winner.position, userName: winner.name, userList: getUserList(currTable) });
             console.log(`win: T${tables[currTable].tableId} - U${winner.clientId} won the round, earning: ${tables[currTable].pot}`);
         } catch (error) {
             console.log(`error: T${tables[currTable].tableId}: ${error}`);
