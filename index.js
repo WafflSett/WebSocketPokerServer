@@ -175,7 +175,7 @@ server.on('connection', (socket) => {
             return;
         }
         if (msg.type == 'fold' && tables[currTable].players[currPlayer].position == tables[currTable].inAction) {
-            console.log(`fold: User ${tables[currTable].players[currPlayer].clientId} folds, surrendering their cards, at table ${tables[currTable].players[currPlayer].tableId}`);
+            console.log(`fold: T${tables[currTable].players[currPlayer].tableId} - U${tables[currTable].players[currPlayer].clientId}@P${tables[currTable].players[currPlayer].position} folds, surrendering their cards`);
             tables[currTable].players[currPlayer].isPlaying = false;
             tables[currTable].pot += tables[currTable].players[currPlayer].bet;
             tables[currTable].inPlay--;
@@ -306,19 +306,17 @@ const endPlayerTurn = (currTable) => {
 const gameOver = (currTable)=>{
     let winner;
     collectPot(currTable);
-    if (tables[currTable].communityCards.length==5) {
+    if (tables[currTable].communityCards!= null && tables[currTable].communityCards.length==5) {
         winner = showDown(currTable);
-        console.log(`win: T${tables[currTable].tableId} - U${winner.clientId}@P${winner.position} won the round, earning: ${tables[currTable].pot}`);
     }else{
         try {
             winner = tables[currTable].players.find(x => x.isPlaying == true)
-            // tables[currTable].players.find(x=>x.clientId==winner.clientId).balance+=tables[currTable].pot;
-            console.log(`win: T${tables[currTable].tableId} - U${winner.clientId}$P${winner.position} won the round, earning: ${tables[currTable].pot}`);
         } catch (error) {
             console.log(`error: T${tables[currTable].tableId}: ${error}`);
         }
     }
     if (winner != null) {
+        console.log(`win: T${tables[currTable].tableId} - U${winner.clientId}@P${winner.position} won the round, earning: ${tables[currTable].pot}`);
         broadcastToTable(currTable, { type: 'win', pot: tables[currTable].pot, clientId: winner.clientId, position: winner.position, userName: winner.name, userList: getUserList(currTable, true) });
     }
     resetTable(currTable);
