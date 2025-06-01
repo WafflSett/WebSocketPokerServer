@@ -264,6 +264,8 @@ const startTable = (currTable) => {
     let dealer = getNextDealer(currTable);
     let smallBlind = getSmallBigBlind(currTable, dealer, true);
     let bigBlind = getSmallBigBlind(currTable, dealer, false);
+    console.log(`getblind: s: ${smallBlind}, b: ${bigBlind}`);
+    
     tables[currTable].smallBlind = smallBlind;
     tables[currTable].bigBlind = bigBlind;
     // console.log(`blinds: Small: ${smallBlind}, Big: ${bigBlind}`);
@@ -428,7 +430,7 @@ const newRound = (currTable) => {
 
 const getUserList = (currTable, winner) => {
     let userList = [];
-    if (tables[currTable]!=null) {    
+    try{    
         tables[currTable].players.forEach(client => {
             if (winner != null) {    
                 userList.push({
@@ -449,6 +451,9 @@ const getUserList = (currTable, winner) => {
                 })
             }
         })
+    }catch (error){
+        console.log(`error: while getting userlist: ${error}`);
+        
     }
     return userList;
 }
@@ -497,8 +502,8 @@ const getNextDealer = (currTable) => {
 const getSmallBigBlind = (currTable, dealer, small) => {
     let activePlayers = tables[currTable].players.filter(x => x.isPlaying);
     console.log(activePlayers.length);
-    console.log(activePlayers);
-    if (tables[currTable].players.length > 2) {
+    // console.log(activePlayers);
+    if (activePlayers.length > 2) {
         let failsafe = 0;
         let nextPosition = dealer;
         do {
