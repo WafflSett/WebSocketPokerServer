@@ -148,7 +148,9 @@ server.on('connection', (socket) => {
                 }
                 user.socket.close();
                 tables[currTable].players.splice(tables[currTable].players.indexOf(user), 1)
-
+                if (checkGameOver(currTable)) {
+                    gameOver(currTable);
+                }
                 clients.splice(clients.findIndex(x => x.clientId == user.clientId), 1)
                 broadcastToTable(currTable, { type: 'disc', userId: msg.userId, userName: msg.userName, position: msg.position })
                 console.log('dc: U' + user.clientId + ' disconnect successful, T' + tables[currTable].tableId + ' ' + tables[currTable].players.length + 'players left');
