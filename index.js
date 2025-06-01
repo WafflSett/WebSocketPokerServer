@@ -154,11 +154,11 @@ server.on('connection', (socket) => {
                 clients.splice(clients.findIndex(x => x.clientId == user.clientId), 1)
                 if (tables[currTable].players.length == 0) {
                     tables.splice(currTable, 1);
-                    console.log(`table: T${currTable.tableId} has been deleted`);
+                    console.log(`dc: user disconnected; T${currTable.tableId} has been deleted`);
                 }else{
                     broadcastToTable(currTable, { type: 'disc', userId: msg.userId, userName: msg.userName, position: msg.position });
+                    console.log('dc: U' + user.clientId + ' disconnect successful, T' + tables[currTable].tableId + ' ' + tables[currTable].players.length + 'players left');
                 }
-                console.log('dc: U' + user.clientId + ' disconnect successful, T' + tables[currTable].tableId + ' ' + tables[currTable].players.length + 'players left');
             } else {
                 console.error('dc: disconnect failed');
             }
