@@ -8,7 +8,7 @@ const server = new WebSocketServer({
 let clientId = 0;
 const clients = [];
 
-let tableId = 0;
+let tableId = -1;
 const tables = [];
 
 let position = 0;
