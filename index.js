@@ -122,7 +122,7 @@ server.on('connection', (socket) => {
             });
 
             let currTable = tables.find(x => x.tableId == myTableId);
-            let userList = getUserList(currTable.tableId);
+            let userList = getUserList(myTableId);
 
             socket.send(JSON.stringify({
                 type: 'init',
@@ -428,26 +428,28 @@ const newRound = (currTable) => {
 
 const getUserList = (currTable, winner) => {
     let userList = [];
-    tables[currTable].players.forEach(client => {
-        if (winner != null) {    
-            userList.push({
-                userId: client.clientId,
-                userName: client.name,
-                position: client.position,
-                bet: client.bet,
-                isPlaying: client.isPlaying,
-                hand : client.hand
-            })
-        }else{
-            userList.push({
-                userId: client.clientId,
-                userName: client.name,
-                position: client.position,
-                bet: client.bet,
-                isPlaying: client.isPlaying
-            })
-        }
-    })
+    if (tables[currTable]!=null) {    
+        tables[currTable].players.forEach(client => {
+            if (winner != null) {    
+                userList.push({
+                    userId: client.clientId,
+                    userName: client.name,
+                    position: client.position,
+                    bet: client.bet,
+                    isPlaying: client.isPlaying,
+                    hand : client.hand
+                })
+            }else{
+                userList.push({
+                    userId: client.clientId,
+                    userName: client.name,
+                    position: client.position,
+                    bet: client.bet,
+                    isPlaying: client.isPlaying
+                })
+            }
+        })
+    }
     return userList;
 }
 
@@ -494,7 +496,9 @@ const getNextDealer = (currTable) => {
 
 const getSmallBigBlind = (currTable, dealer, small) => {
     let activePlayers = tables[currTable].players.filter(x => x.isPlaying);
-    if (activePlayers.length > 2) {
+    console.log(activePlayers.length);
+    console.log(activePlayers);
+    if (tables[currTable].players.length > 2) {
         let failsafe = 0;
         let nextPosition = dealer;
         do {
