@@ -141,7 +141,7 @@ server.on('connection', (socket) => {
         // console.log(msg);
         let currTable = tables.findIndex(x => x.players.findIndex(x => x.clientId == msg.userId) != -1);
         if (msg.type == 'disc') {
-            if (currTable != null) {
+            if (currTable != -1) {
                 let user = tables[currTable].players.find(x => x.clientId == msg.userId);
                 if (user.isPlaying) {
                     tables[currTable].inPlay--;
@@ -154,7 +154,7 @@ server.on('connection', (socket) => {
                 clients.splice(clients.findIndex(x => x.clientId == user.clientId), 1)
                 if (tables[currTable].players.length == 0) {
                     tables.splice(currTable, 1);
-                    console.log(`dc: user disconnected; T${currTable.tableId} has been deleted`);
+                    console.log(`dc: user disconnected; T${currTable} has been deleted`);
                 }else{
                     broadcastToTable(currTable, { type: 'disc', userId: msg.userId, userName: msg.userName, position: msg.position });
                     console.log('dc: U' + user.clientId + ' disconnect successful, T' + tables[currTable].tableId + ' ' + tables[currTable].players.length + 'players left');
@@ -176,7 +176,7 @@ server.on('connection', (socket) => {
             }
             let readyPlayers = tables[currTable].players.map(x => x.ready);
             broadcastToTable(currTable, { type: 'ready', ready: readyPlayers.filter(x => x == true).length, balance: tables[currTable].players.length })
-            if (currTable != null && tables[currTable].players.length >= 2 && readyPlayers.includes(true) && new Set(readyPlayers).size == 1) {
+            if (currTable != -1 && tables[currTable].players.length >= 2 && readyPlayers.includes(true) && new Set(readyPlayers).size == 1) {
                 startTable(currTable);
             }
             return;
