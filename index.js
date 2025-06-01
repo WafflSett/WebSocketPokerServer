@@ -228,7 +228,7 @@ server.on('connection', (socket) => {
             if (tables[currTable].players[currPlayer].bet > tables[currTable].runningBet) {
                 tables[currTable].runningBet = tables[currTable].players[currPlayer].bet
             }
-            console.log(`bet: T${currTable} - U${tables[currTable].players[currPlayer].clientId} has gone all in`);
+            console.log(`bet: T${currTable} - U${tables[currTable].players[currPlayer].clientId} has gone all in: ${tables[currTable].players[currPlayer].bet}`);
             endPlayerTurn(currTable);
             return;
         }
@@ -351,6 +351,7 @@ const gameOver = (currTable) => {
         }
     }
     if (winner != null) {
+        tables[currTable].players.find(x=>x.clientId==winner.clientId).balance+=tables[currTable].pot;
         console.log(`win: T${tables[currTable].tableId} - U${winner.clientId}@P${winner.position} won the round, earning: ${tables[currTable].pot}`);
         broadcastToTable(currTable, { type: 'win', pot: tables[currTable].pot, clientId: winner.clientId, position: winner.position, userName: winner.name, userList: getUserList(currTable, true) });
     }
