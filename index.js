@@ -91,8 +91,8 @@ server.on('connection', (socket) => {
                 })
                 // console.log(lasttable.players);
             } else {
-                if (tables.length==0) {
-                    tableId=-1;
+                if (tables.length == 0) {
+                    tableId = -1;
                 }
                 // create new table
                 tableId++;
@@ -124,7 +124,7 @@ server.on('connection', (socket) => {
                 'balance': defBalance
             });
 
-            let currTable = tables.find(x=>x.tableId==myTableId);
+            let currTable = tables.find(x => x.tableId == myTableId);
             let userList = getUserList(myTableId);
 
             socket.send(JSON.stringify({
@@ -351,7 +351,7 @@ const gameOver = (currTable) => {
         }
     }
     if (winner != null) {
-        tables[currTable].players.find(x=>x.clientId==winner.clientId).balance+=tables[currTable].pot;
+        tables[currTable].players.find(x => x.clientId == winner.clientId).balance += tables[currTable].pot;
         console.log(`win: T${tables[currTable].tableId} - U${winner.clientId}@P${winner.position} won the round, earning: ${tables[currTable].pot}`);
         broadcastToTable(currTable, { type: 'win', pot: tables[currTable].pot, clientId: winner.clientId, position: winner.position, userName: winner.name, userList: getUserList(currTable, true) });
     }
