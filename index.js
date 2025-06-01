@@ -506,7 +506,11 @@ const getSmallBigBlind = (currTable, dealer, small) => {
                 }
             } else {
                 if (nextPosition + 2 < Math.max(activePlayers.map(x => x.position))) {
-                    nextPosition += 2;
+                    if (nextPosition == dealer) {
+                        nextPosition += 2;
+                    }else{
+                        nextPosition++;
+                    }
                 } else {
                     nextPosition = 0;
                 }
