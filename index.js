@@ -96,7 +96,7 @@ server.on('connection', (socket) => {
                 myTableId = tableId;
                 position = 0
                 tables.push({
-                    tableId: tableId, players: [
+                    tableId: myTableId, players: [
                         {
                             'socket': socket,
                             'clientId': clientId,
@@ -247,7 +247,7 @@ server.on('connection', (socket) => {
                 tables.splice(currTable, 1);
                 console.log(`dc: user disconnected; T${currTable} has been deleted`);
             }else{
-                broadcastToTable(currTable, { type: 'disc', userId: msg.userId, userName: msg.userName, position: msg.position });
+                broadcastToTable(currTable, { type: 'disc', userId: user.clientId, userName: user.name, position: user.position });
                 console.log('dc: U' + user.clientId + ' disconnect successful, T' + tables[currTable].tableId + ' ' + tables[currTable].players.length + 'players left');
             }
         } catch (error) {
