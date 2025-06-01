@@ -8,7 +8,7 @@ const server = new WebSocketServer({
 let clientId = 0;
 const clients = [];
 
-let tableId = -1;
+let tableId = 0;
 const tables = [];
 
 let position = 0;
@@ -472,9 +472,13 @@ const getFreshDeck = () => {
 }
 
 const broadcastToTable = (currTable, message) => {
-    tables[currTable].players.forEach(client => {
-        client.socket.send(JSON.stringify(message))
-    })
+    try {
+        tables[currTable].players.forEach(client => {
+            client.socket.send(JSON.stringify(message))
+        })
+    } catch (error) {
+        console.log(`error: failed broadcast: ${error}`);
+    }
 }
 
 const getNextDealer = (currTable) => {
@@ -508,13 +512,13 @@ const getSmallBigBlind = (currTable, dealer, small) => {
         let nextPosition = dealer;
         do {
             if (small) {
-                if (nextPosition + 1 < Math.max(activePlayers.map(x => x.position))) {
+                if (nextPosition + 1 <= Math.max(...activePlayers.map(x => x.position))) {
                     nextPosition++;
                 } else {
                     nextPosition = 0;
                 }
             } else {
-                if (nextPosition + 2 < Math.max(activePlayers.map(x => x.position))) {
+                if (nextPosition + 2 <= Math.max(...activePlayers.map(x => x.position))) {
                     if (nextPosition == dealer) {
                         nextPosition += 2;
                     }else{
@@ -624,8 +628,7 @@ const decideFirstToAct = (currTable) => {
     return nextPosition;
 }
 
-server.on('close', () => {
-})
+server.on('close', () => {})
 
 server.on('error', (error) => {
     console.log(error.message);
