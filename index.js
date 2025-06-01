@@ -2,7 +2,7 @@ import { WebSocketServer } from "ws";
 import handChecks from "./handChecks.js";
 
 const server = new WebSocketServer({
-    port: 8081
+    port: 8080
 });
 
 let clientId = 0;
