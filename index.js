@@ -121,7 +121,7 @@ server.on('connection', (socket) => {
                 'balance': defBalance
             });
 
-            let currTable = tables.find(x => x.tableId == tableId);
+            let currTable = tables.find(x => x.tableId == myTableId);
             let userList = getUserList(currTable.tableId);
 
             socket.send(JSON.stringify({
@@ -134,7 +134,7 @@ server.on('connection', (socket) => {
                 balance: defBalance
             }))
             broadcastToTable(currTable.tableId, { type: 'join', userId: clientId, userName: msg.userName, tableId: myTableId, position: position, userList: userList, inProgress: currTable.inProgress });
-            console.log(`init: U${clientId} conn. to T${tableId} @P ${position}`);
+            console.log(`init: U${clientId} conn. to T${myTableId} @P ${position}`);
             return;
         }
 
@@ -228,7 +228,7 @@ server.on('connection', (socket) => {
 
 //return true if there are no remaining players
 const checkGameOver = (currTable) => {
-    if (tables[currTable].inPlay < 2) {
+    if (tables[currTable].players.length < 2) {
         return true;
     }
     return false;
