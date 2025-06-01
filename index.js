@@ -147,10 +147,10 @@ server.on('connection', (socket) => {
                     tables[currTable].inPlay--;
                 }
                 user.socket.close();
-                tables[currTable].players.splice(tables[currTable].players.indexOf(user), 1)
                 if (checkGameOver(currTable)) {
                     gameOver(currTable);
                 }
+                tables[currTable].players.splice(tables[currTable].players.indexOf(user), 1)
                 clients.splice(clients.findIndex(x => x.clientId == user.clientId), 1)
                 if (tables[currTable].players.length == 0) {
                     tables.splice(currTable, 1);
@@ -162,7 +162,6 @@ server.on('connection', (socket) => {
             } else {
                 console.error('dc: disconnect failed');
             }
-            checkGameOver(currTable)
             return;
         }
         let currPlayer = tables[currTable].players.findIndex(x => x.clientId == msg.userId);
@@ -313,7 +312,7 @@ const endPlayerTurn = (currTable) => {
 const gameOver = (currTable)=>{
     let winner;
     collectPot(currTable);
-    if (tables[currTable].communityCards!= null && tables[currTable].communityCards.length==5) {
+    if (tables[currTable].communityCards!= null && tables[currTable].communityCards.length==5 && tables[currTable].inPlay!=0) {
         winner = showDown(currTable);
     }else{
         try {
