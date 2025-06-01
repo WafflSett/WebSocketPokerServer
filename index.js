@@ -230,7 +230,31 @@ server.on('connection', (socket) => {
             return;
         }
     })
-})
+    socket.on('close', ()=>{
+        try {
+            let currTable = tables.findIndex(x=>x.players.find(x=>x.socket == socket) != undefined);
+            let user = tables[currTable].players.find(x=>x.socket == socket);
+            if (user.isPlaying) {
+                tables[currTable].inPlay--;
+            }
+            user.socket.close();
+            if (checkGameOver(currTable)) {
+                gameOver(currTable);
+            }
+            tables[currTable].players.splice(tables[currTable].players.indexOf(user), 1)
+            clients.splice(clients.findIndex(x => x.clientId == user.clientId), 1)
+            if (tables[currTable].players.length == 0) {
+                tables.splice(currTable, 1);
+                console.log(`dc: user disconnected; T${currTable} has been deleted`);
+            }else{
+                broadcastToTable(currTable, { type: 'disc', userId: msg.userId, userName: msg.userName, position: msg.position });
+                console.log('dc: U' + user.clientId + ' disconnect successful, T' + tables[currTable].tableId + ' ' + tables[currTable].players.length + 'players left');
+            }
+        } catch (error) {
+            console.error(`dc: disconnect failed: ${error}`);
+        }
+    })
+});
 
 //return true if there are no remaining players
 const checkGameOver = (currTable) => {
