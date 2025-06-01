@@ -230,7 +230,7 @@ server.on('connection', (socket) => {
 
 //return true if there are no remaining players
 const checkGameOver = (currTable) => {
-    if (tables[currTable].players.length < 2) {
+    if (tables[currTable].inProgress && tables[currTable].players.length < 2) {
         return true;
     }
     return false;
